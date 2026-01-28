@@ -91,64 +91,6 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
         self.executor = ThreadPoolExecutor(max_workers=4)
 
-    # for f in os.listdir(os.path.join(root_path, "survivors")):
-    #    os.remove(os.path.join(root_path, "survivors", f))
-
-
-    # def _write_survivor_to_file(self, tree, file_path):
-    #     print("Writing survivor to file:", file_path)
-
-    #     def execute_with_file(pos, output, **kwargs):
-    #         node = tree.tree[pos[0]]
-
-    #         if isinstance(node, FunctionNode):
-    #             # evaluate children first
-    #             args = []
-    #             for _ in range(node.n_args):
-    #                 pos[0] += 1
-    #                 args.append(execute_with_file(pos, output, **kwargs))
-
-    #             func = node.function
-    #             sig = inspect.signature(func)
-
-    #             # count regular positional params (no *args, **kwargs)
-    #             params = [
-    #                 p for p in sig.parameters.values()
-    #                 if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
-    #             ]
-    #             n_params = len(params)
-
-    #             # Case 1 - EC-KitY style: f(*children)
-    #             if n_params == len(args):
-    #                 return func(*args)
-
-    #             # Case 2 - your old assembly style: f(output, *children)
-    #             elif n_params == len(args) + 1:
-    #                 return func(output, *args)
-
-    #             # Fallback - be conservative and do not pass output
-    #             else:
-    #                 return func(*args)
-
-    #         else:  # TerminalNode
-    #             return kwargs.get(getattr(node, "value", None), getattr(node, "value", None))
-
-    #     with open(file_path, "w+", encoding="utf-8") as file:
-    #         # Safe prolog
-    #         print("bits 16", file=file)
-    #         print("org 0", file=file)
-    #         print("start:", file=file)
-    #         print("nop", file=file)
-
-    #         # Your generated code
-    #         execute_with_file([0], file)
-
-    #         # Safe epilog: do not fall into garbage
-    #         print("jmp start", file=file)
-
-    #         # Correct padding in BYTES (not text length)
-    #         # Use 512 unless you know your engine expects 510
-    #         print("times 512-($-$$) db 0x90", file=file)
 
 
     def _write_survivor_to_file(self, tree, file_path):

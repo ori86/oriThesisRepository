@@ -7,6 +7,6 @@ push cs
 pop es
 cld
 xor di, di
-mov dx, sp
+stosw
 jmp start
 times 510-($-$$) db 0x90

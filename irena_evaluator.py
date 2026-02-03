@@ -2,28 +2,32 @@ import csv
 import os
 import subprocess
 import inspect
-
+import shutil
 import threading
 import time
+import numpy as np
+import copy
+from numbers import Number
 from concurrent.futures.thread import ThreadPoolExecutor
 from assembly_individual import AssemblyIndividual
-import numpy as np
 from eckity.evaluators.simple_individual_evaluator import SimpleIndividualEvaluator
-import shutil
 from eckity.genetic_encodings.gp.tree.tree_node import FunctionNode, TerminalNode
-from numbers import Number
+
 # 0 - score, 1 - lifetime, 2 - written bytes
 SCORE = 0
 LIFETIME = 1
 BYTES = 2
 RATE = 3
+
 # casting_utils.py
-import copy
 from typing import Literal, Optional
 from eckity.genetic_encodings.gp.tree.tree_individual import Tree
-import new_types  # add at top of file if not already
+import new_types
+
+
 
 Slot = Literal["tree1", "tree2", "both"]
+
 
 def cast_tree_to_assembly(tree_ind: Tree,
                           *,
@@ -133,7 +137,24 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
                 return res
 
             else:  # TerminalNode
-                return kwargs.get(getattr(node, "value", None), getattr(node, "value", None))
+                # return kwargs.get(getattr(node, "value", None), getattr(node, "value", None))
+                v = getattr(node, "value", None)
+
+                # if this terminal is a section terminal (like "nop"), wrap it as t_section
+                if v in tree.terminal_set and tree.terminal_set[v] is new_types.t_section:
+                    return new_types.t_section(v)
+
+                return kwargs.get(v, v)
+
+        
+        
+        print("DEBUG tree root_type:", getattr(tree, "root_type", None))
+        print("DEBUG first node:", tree.tree[0].__class__.__name__)
+        if hasattr(tree.tree[0], "function"):
+            print("DEBUG first func:", getattr(tree.tree[0].function, "__name__", tree.tree[0].function))
+        if hasattr(tree.tree[0], "value"):
+            print("DEBUG first terminal value:", tree.tree[0].value)
+
 
         with open(file_path, "w+", encoding="utf-8") as file:
             # Safer, predictable skeleton

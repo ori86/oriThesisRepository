@@ -1,14 +1,16 @@
+# imports
 import random
+import os
+import new_types
+import copy
+from time import time
+
+# imports from eckity
 from eckity.algorithms.simple_evolution import SimpleEvolution
 from eckity.breeders.simple_breeder import SimpleBreeder
-from eckity.creators.ga_creators.bit_string_vector_creator import GABitStringVectorCreator
-from eckity.genetic_operators.crossovers.vector_k_point_crossover import VectorKPointsCrossover
-from eckity.genetic_operators.mutations.vector_random_mutation import BitStringVectorFlipMutation
 from eckity.genetic_operators.selections.tournament_selection import TournamentSelection
 from eckity.statistics.best_average_worst_statistics import BestAverageWorstStatistics
 from eckity.subpopulation import Subpopulation
-from examples.vectorga.knapsack.knapsack_evaluator import KnapsackEvaluator, NUM_ITEMS
-import numpy as np
 from eckity.algorithms.simple_evolution import SimpleEvolution
 from eckity.breeders.simple_breeder import SimpleBreeder
 from eckity.creators.gp_creators.grow import GrowCreator
@@ -16,23 +18,13 @@ from eckity.genetic_operators.crossovers.subtree_crossover import SubtreeCrossov
 from eckity.genetic_operators.mutations.subtree_mutation import SubtreeMutation
 from eckity.genetic_operators.selections.tournament_selection import TournamentSelection
 from eckity.subpopulation import Subpopulation
-from eckity.termination_checkers.threshold_from_target_termination_checker import ThresholdFromTargetTerminationChecker
-from time import time
-
-
-# my imports
-from eckity.creators.ga_creators.int_vector_creator import GAIntVectorCreator
-from eckity.genetic_operators.mutations.vector_random_mutation import IntVectorOnePointMutation
-#from subpopulation_with_median import Subpopulation
-#from best_average_median_worst_statistics import BestAverageMedianWorstStatistics
-import os
-from irena_evaluator import AssemblyEvaluator
 from eckity.creators.gp_creators.grow import GrowCreator
 from eckity.genetic_encodings.gp.tree.utils import get_func_types
-import new_types
-from new_primitives2 import FUNCTION_SET2
-import copy
 
+# imports from my files
+from new_primitives2 import FUNCTION_SET2
+from irena_evaluator import AssemblyEvaluator
+from assembly_parameters import terminal_set as terminal_set
 
 # my parameters
 WINDOWS = True
@@ -43,12 +35,10 @@ cgx_legacy_path = "corewars8086-master\\bundle\\cgx-legacy.bat"
 root_path = "C:\\Users\\oriei\\Thesis\\oriWorkNewVenv"
 nasm_path = "C:\\Users\\oriei\\Thesis\\nasm-folder\\nasm.exe"
 
-from assembly_parameters import terminal_set as terminal_set
 
 
 
 def setup(competition_size=3):
-    # List all files in the survivors directory
     try:
         files = os.listdir(survivors_path)
         # Filter out non-file entries if needed
@@ -58,30 +48,28 @@ def setup(competition_size=3):
             print(name)
     except Exception as e:
         print(f"Error reading survivors directory: {e}")
-
     all_survivors = os.listdir(survivors_path)
     group_survivors = list(set([survivor[:-1] for survivor in all_survivors]))  # avoid the warrior enumeration
     k = min(len(group_survivors), competition_size)
     train_set = random.sample(group_survivors, k=k)
-
-
     print(os.listdir(os.path.join(root_path, "corewars8086-master\\bundle", "survivors")))
+
+
+
 
 def create_algo():
 
     algo = SimpleEvolution(
-            Subpopulation(creators=GrowCreator(init_depth=(1, 22),
+            Subpopulation(creators=GrowCreator(init_depth=(2,20),
                                            terminal_set=terminal_set,
                                            function_set=FUNCTION_SET2,
                                            root_type = new_types.t_section,
                                            bloat_weight=0.00001),
-                          population_size=4,
-                          # user-defined fitness evaluation method
+                          population_size=100,
                           evaluator=AssemblyEvaluator(root_path=root_path, nasm_path=nasm_path),
                           # minimization problem (fitness is sum of values), so lower fitness is better
                           higher_is_better=True,
                           elitism_rate=0.00,
-                          # genetic operators sequence to be applied in each generation
                           operators_sequence=[
                             SubtreeCrossover(probability=0.5, arity=2), # crossover inner trees of 2 individuals, can be more
                             SubtreeMutation(probability=0.5, arity=1), # mutate a subtree of one inner tree of 1 individual
@@ -92,7 +80,7 @@ def create_algo():
                           ]),
             breeder=SimpleBreeder(),
             max_workers=1,
-            max_generation=5,
+            max_generation=100,
             statistics=BestAverageWorstStatistics()
         )
     return algo

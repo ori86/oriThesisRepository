@@ -71,7 +71,7 @@ def idw(x: t_func_opcode_operand_WORD) -> t_func_opcode_operand_WORD:
 # Export to Eckity
 FUNCTION_SET2 = [
     seq,
-    nop,
+    #nop,
     stosb,
     stosw,
     mov,

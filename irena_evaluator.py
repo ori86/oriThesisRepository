@@ -7,6 +7,7 @@ import threading
 import time
 import numpy as np
 import copy
+import glob
 from numbers import Number
 from concurrent.futures.thread import ThreadPoolExecutor
 from assembly_individual import AssemblyIndividual
@@ -97,9 +98,83 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
 
 
-    def _write_survivor_to_file(self, tree, file_path):
-        #print("Writing survivor to file:", file_path)
+    # def _write_survivor_to_file(self, tree, file_path):
+    #     def execute_with_file(pos, output, **kwargs):
+    #         node = tree.tree[pos[0]]
 
+    #         if isinstance(node, FunctionNode):
+    #             # evaluate children first
+    #             args = []
+    #             for _ in range(node.n_args):
+    #                 pos[0] += 1
+    #                 args.append(execute_with_file(pos, output, **kwargs))
+
+    #             func = node.function
+    #             sig = inspect.signature(func)
+
+    #             # count regular positional params (no *args, **kwargs)
+    #             params = [
+    #                 p for p in sig.parameters.values()
+    #                 if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
+    #             ]
+    #             n_params = len(params)
+
+    #             # Call the primitive in the right style
+    #             if n_params == len(args):
+    #                 res = func(*args)
+    #             elif n_params == len(args) + 1:
+    #                 res = func(output, *args)
+    #             else:
+    #                 res = func(*args)
+
+    #             # If a primitive returns assembly text, emit it
+
+    #             # Only emit full instruction lines (t_section), never operands
+    #             if isinstance(res, new_types.t_section):
+    #                 print(str(res), file=output)
+
+    #             return res
+
+    #         else:  # TerminalNode
+    #             # return kwargs.get(getattr(node, "value", None), getattr(node, "value", None))
+    #             v = getattr(node, "value", None)
+
+    #             # if this terminal is a section terminal (like "nop"), wrap it as t_section
+    #             if v in tree.terminal_set and tree.terminal_set[v] is new_types.t_section:
+    #                 return new_types.t_section(v)
+
+    #             return kwargs.get(v, v)
+
+    #     with open(file_path, "w+", encoding="utf-8") as file:
+    #         # Safer, predictable skeleton
+    #         print("bits 16", file=file)
+    #         print("org 0", file=file)
+    #         print("start:", file=file)
+    #         print("push cs", file=file)
+    #         print("pop ds", file=file)
+    #         print("push cs", file=file)
+    #         print("pop es", file=file)
+    #         print("cld", file=file)
+    #         print("xor di, di", file=file)
+
+    #         before = file.tell()
+    #         execute_with_file([0], file)
+    #         after = file.tell()
+
+    #         # If the GP produced nothing, at least do something valid
+    #         if after == before:
+    #             print("nop", file=file)
+
+    #         # Prevent falling into padding bytes
+    #         print("jmp start", file=file)
+
+    #         # Pad in BYTES (NASM), not text length
+    #         # Keep 510 to match your original intention
+    #         print("times 510-($-$$) db 0x90", file=file)
+
+                
+
+    def _write_survivor_to_file(self, tree, file_path):
         def execute_with_file(pos, output, **kwargs):
             node = tree.tree[pos[0]]
 
@@ -113,14 +188,13 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
                 func = node.function
                 sig = inspect.signature(func)
 
-                # count regular positional params (no *args, **kwargs)
                 params = [
                     p for p in sig.parameters.values()
                     if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
                 ]
                 n_params = len(params)
 
-                # Call the primitive in the right style
+                # Call primitive
                 if n_params == len(args):
                     res = func(*args)
                 elif n_params == len(args) + 1:
@@ -128,62 +202,42 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
                 else:
                     res = func(*args)
 
-                # If a primitive returns assembly text, emit it
-
-                # Only emit full instruction lines (t_section), never operands
+                # Only emit full instructions / blocks
                 if isinstance(res, new_types.t_section):
                     print(str(res), file=output)
 
                 return res
 
-            else:  # TerminalNode
-                # return kwargs.get(getattr(node, "value", None), getattr(node, "value", None))
-                v = getattr(node, "value", None)
+            # TerminalNode
+            v = getattr(node, "value", None)
 
-                # if this terminal is a section terminal (like "nop"), wrap it as t_section
-                if v in tree.terminal_set and tree.terminal_set[v] is new_types.t_section:
-                    return new_types.t_section(v)
+            # If terminal is a section terminal (like "nop"), wrap it
+            if v in tree.terminal_set and tree.terminal_set[v] is new_types.t_section:
+                return new_types.t_section(v)
 
-                return kwargs.get(v, v)
-
-        
-        
-        # print("DEBUG tree root_type:", getattr(tree, "root_type", None))
-        # print("DEBUG first node:", tree.tree[0].__class__.__name__)
-        # if hasattr(tree.tree[0], "function"):
-        #     print("DEBUG first func:", getattr(tree.tree[0].function, "__name__", tree.tree[0].function))
-        # if hasattr(tree.tree[0], "value"):
-        #     print("DEBUG first terminal value:", tree.tree[0].value)
-
+            return kwargs.get(v, v)
 
         with open(file_path, "w+", encoding="utf-8") as file:
-            # Safer, predictable skeleton
+            # Minimal required header for NASM/corewars
             print("bits 16", file=file)
             print("org 0", file=file)
             print("start:", file=file)
-            print("push cs", file=file)
-            print("pop ds", file=file)
-            print("push cs", file=file)
-            print("pop es", file=file)
-            print("cld", file=file)
-            print("xor di, di", file=file)
 
             before = file.tell()
             execute_with_file([0], file)
             after = file.tell()
 
-            # If the GP produced nothing, at least do something valid
+            # If GP produced nothing, keep it valid
             if after == before:
                 print("nop", file=file)
 
-            # Prevent falling into padding bytes
-            print("jmp start", file=file)
-
-            # Pad in BYTES (NASM), not text length
-            # Keep 510 to match your original intention
+            # No forced loop. Execution will fall into padding (NOPs).
             print("times 510-($-$$) db 0x90", file=file)
 
-                
+
+
+
+
 
     def _compile_survivor(self, asm_path, individual_name, survivors_path, nasm_path):
         out_bin = os.path.join(survivors_path, individual_name)
@@ -363,8 +417,8 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
 
         t0 = time.time()
-        print(f"EVAL {individual.id}: starting cgx at {t0:.1f}")
-        print("EVAL survivors count:", len(os.listdir(survivors_path)))
+        #print(f"EVAL {individual.id}: starting cgx at {t0:.1f}")
+        #print("EVAL survivors count:", len(os.listdir(survivors_path)))
 
         # scores files: cgx might ignore the requested path, but we must define one
         requested_scores = os.path.join(worker_root, f"scores_{individual.id}.csv")
@@ -445,7 +499,7 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
         # Read and process scores
         results = self._read_scores(scores_path, individual_name1)
-        print("EVAL parsed group rows:", results["group_data"][:2], "indiv rows:", results["indiv_data"][:2])
+        #print("EVAL parsed group rows:", results["group_data"][:2], "indiv rows:", results["indiv_data"][:2])
 
         # norm_indiv1 = normalize_data(results["indiv_data"], results["indiv1_index"])
         # fitness1 = fitness_calculation(

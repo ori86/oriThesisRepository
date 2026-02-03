@@ -98,7 +98,7 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
 
     def _write_survivor_to_file(self, tree, file_path):
-        print("Writing survivor to file:", file_path)
+        #print("Writing survivor to file:", file_path)
 
         def execute_with_file(pos, output, **kwargs):
             node = tree.tree[pos[0]]
@@ -148,12 +148,12 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
         
         
-        print("DEBUG tree root_type:", getattr(tree, "root_type", None))
-        print("DEBUG first node:", tree.tree[0].__class__.__name__)
-        if hasattr(tree.tree[0], "function"):
-            print("DEBUG first func:", getattr(tree.tree[0].function, "__name__", tree.tree[0].function))
-        if hasattr(tree.tree[0], "value"):
-            print("DEBUG first terminal value:", tree.tree[0].value)
+        # print("DEBUG tree root_type:", getattr(tree, "root_type", None))
+        # print("DEBUG first node:", tree.tree[0].__class__.__name__)
+        # if hasattr(tree.tree[0], "function"):
+        #     print("DEBUG first func:", getattr(tree.tree[0].function, "__name__", tree.tree[0].function))
+        # if hasattr(tree.tree[0], "value"):
+        #     print("DEBUG first terminal value:", tree.tree[0].value)
 
 
         with open(file_path, "w+", encoding="utf-8") as file:
@@ -268,14 +268,7 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
         """
         Compute the fitness value of a given individual.
         """
-        # Use root_path as the engine working dir,
-        # because the Java engine expects <root_path>\survivors to exist.
         worker_root = self.root_path
-        # survivors_path = os.path.join(worker_root, "survivors")
-        # os.makedirs(survivors_path, exist_ok=True)
-
-
-
         survivors_path = os.path.join(
             self.root_path,
             "corewars8086-master",
@@ -283,8 +276,6 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
             "survivors",
         )
         os.makedirs(survivors_path, exist_ok=True)
-
-
         train_survivors = os.path.join(self.root_path, "survivors")
 
 
@@ -321,21 +312,14 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
             if not os.path.isfile(src):
                 continue
 
-            # Prevent copying file onto itself (avoids SameFileError if misconfigured)
             if os.path.abspath(src) == os.path.abspath(dst):
                 continue
 
             shutil.copy2(src, dst)
 
 
-        # We don't need to copy the engine jar here:
-        # self.engine is already an absolute path to corewars8086-5.0.1.jar
-        # and we run it directly below.
 
-        # NASM: just use the path you got in __init__
         nasm_path = self.nasm_path
-
-        # Two warriors for this individual (currently the same program twice)
         individual_name1 = f"{individual.id}try1"
         individual_name2 = f"{individual.id}try2"
 
@@ -357,26 +341,7 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
             individual_name2, os.path.exists(os.path.join(survivors_path, individual_name2)))
 
         if score1 == -1 or score2 == -1:
-            # compilation failed - clean and return 0 fitness
-
-
-
-            # for name in (individual_name1, individual_name2):
-            #     compiled_path = os.path.join(survivors_path, name)
-            #     if os.path.exists(compiled_path):
-            #         os.remove(compiled_path)
-
-
-
-            #return [0, 0, 0, [0, 0, 0, 0]]
             return 0.0
-
-
-        # Prepare scores.csv path in <root_path>
-
-        # scores_path = os.path.join(worker_root, f"scores_{individual.id}.csv")
-        # if os.path.exists(scores_path):
-        #     os.remove(scores_path)
 
 
         requested_scores = os.path.join(worker_root, f"scores_{individual.id}.csv")
@@ -434,7 +399,7 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
             print(stderr.decode(errors="ignore"))
 
         t1 = time.time()
-        print(f"EVAL {individual.id}: cgx finished in {t1 - t0:.1f}s, rc={proc.returncode}")
+        # print(f"EVAL {individual.id}: cgx finished in {t1 - t0:.1f}s, rc={proc.returncode}")
         if stdout:
             print("cgx stdout:", stdout.decode(errors="ignore")[:500])
         if stderr:
@@ -459,13 +424,6 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
         scores_path = requested_scores
 
-        # # Remove the compiled individual warriors from survivors
-        # for name in (individual_name1, individual_name2):
-        #     compiled_path = os.path.join(survivors_path, name)
-        #     if os.path.exists(compiled_path):
-        #         os.remove(compiled_path)
-
-
         base = f"{individual.id}try"
         deadline = time.time() + 60
         txt = ""
@@ -489,21 +447,21 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
         results = self._read_scores(scores_path, individual_name1)
         print("EVAL parsed group rows:", results["group_data"][:2], "indiv rows:", results["indiv_data"][:2])
 
-        norm_indiv1 = normalize_data(results["indiv_data"], results["indiv1_index"])
-        fitness1 = fitness_calculation(
-            norm_indiv1[SCORE],
-            norm_indiv1[LIFETIME],
-            norm_indiv1[BYTES],
-            norm_indiv1[RATE],
-        )
+        # norm_indiv1 = normalize_data(results["indiv_data"], results["indiv1_index"])
+        # fitness1 = fitness_calculation(
+        #     norm_indiv1[SCORE],
+        #     norm_indiv1[LIFETIME],
+        #     norm_indiv1[BYTES],
+        #     norm_indiv1[RATE],
+        # )
 
-        norm_indiv2 = normalize_data(results["indiv_data"], results["indiv2_index"])
-        fitness2 = fitness_calculation(
-            norm_indiv2[SCORE],
-            norm_indiv2[LIFETIME],
-            norm_indiv2[BYTES],
-            norm_indiv2[RATE],
-        )
+        # norm_indiv2 = normalize_data(results["indiv_data"], results["indiv2_index"])
+        # fitness2 = fitness_calculation(
+        #     norm_indiv2[SCORE],
+        #     norm_indiv2[LIFETIME],
+        #     norm_indiv2[BYTES],
+        #     norm_indiv2[RATE],
+        # )
 
         norm_group = normalize_data(results["group_data"], results["group_index"])
         fitness_group = fitness_calculation(
@@ -512,16 +470,15 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
             norm_group[BYTES],
             norm_group[RATE],
         )
-        print(f"EVAL id={individual.id} group_row={norm_group} fitness_group={fitness_group}")
+        #print(f"EVAL id={individual.id} group_row={norm_group} fitness_group={fitness_group}")
 
         
-        # Optional: keep extra info on the individual for later debugging
-        individual.extra_stats = {
-            "fitness1": float(fitness1),
-            "fitness2": float(fitness2),
-            "fitness_group": float(fitness_group),
-            "norm_group": [float(x) for x in norm_group],
-        }
+        # individual.extra_stats = {
+        #     "fitness1": float(fitness1),
+        #     "fitness2": float(fitness2),
+        #     "fitness_group": float(fitness_group),
+        #     "norm_group": [float(x) for x in norm_group],
+        # }
 
 
         # Remove the compiled individual warriors from survivors
@@ -588,6 +545,7 @@ def normalize_data(data, index):
     bytes_written = data[index][BYTES]
     rate = data[index][RATE]
     return [score, lifetime, bytes_written, rate]
+
 
 def fitness_calculation(score, alive_time, bytes_written, writing_rate):
    # if bytes_written >= 5:

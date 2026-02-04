@@ -25,6 +25,10 @@ class t_func_addres(str): pass
 class t_random_generator_lcg(str): pass
 class t_random_generator_xor_shift(str): pass
 
+# class t_stmt(t_section): pass
+# class t_program(t_section): pass
+
+
 
 type_tokens  = {
     "section": t_section,

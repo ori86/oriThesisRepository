@@ -8,6 +8,7 @@ import time
 import numpy as np
 import copy
 import glob
+from pathlib import Path
 from numbers import Number
 from concurrent.futures.thread import ThreadPoolExecutor
 from assembly_individual import AssemblyIndividual
@@ -217,6 +218,13 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
             return kwargs.get(v, v)
 
+
+        # print("tree\n")
+        # print(tree)
+        # print("tree.tree\n")
+        # print(tree.tree)
+        # print("tree.tree[pos[0]]\n")
+        # print(tree.tree[[0][0]])
         with open(file_path, "w+", encoding="utf-8") as file:
             # Minimal required header for NASM/corewars
             print("bits 16", file=file)
@@ -224,7 +232,10 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
             print("start:", file=file)
 
             before = file.tell()
-            execute_with_file([0], file)
+            pos = [0]
+            execute_with_file(pos, file)
+            used = pos[0] + 1
+            #print(f"DEBUG used_nodes={used} / total_nodes={len(tree.tree)}", flush=True)
             after = file.tell()
 
             # If GP produced nothing, keep it valid
@@ -390,9 +401,9 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
         score1 = self._compile_survivor(asm_path1, individual_name1, survivors_path, nasm_path)
         score2 = self._compile_survivor(asm_path2, individual_name2, survivors_path, nasm_path)
 
-        print("compiled check:",
-            individual_name1, os.path.exists(os.path.join(survivors_path, individual_name1)),
-            individual_name2, os.path.exists(os.path.join(survivors_path, individual_name2)))
+        # print("compiled check:",
+        #     individual_name1, os.path.exists(os.path.join(survivors_path, individual_name1)),
+        #     individual_name2, os.path.exists(os.path.join(survivors_path, individual_name2)))
 
         if score1 == -1 or score2 == -1:
             return 0.0
@@ -542,13 +553,46 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
                 os.remove(compiled_path)
 
 
+        self._keep_last_n_scores(n=10)
+        self._keep_last_n_asms(n = 100)
 
-        return float(fitness_group)
+
+
+        return_fitness_value = float(fitness_group)
+        print(f'NOW {individual_name1} and {individual_name2}, got fitness: {return_fitness_value}, len: {len(individual.tree)}')
+        return return_fitness_value
 
         #return [fitness1, fitness2, fitness_group, norm_group]
 
 
 
+    def _keep_last_n_scores(self, n: int = 10):
+        pattern = os.path.join(self.root_path, "scores_*.csv")
+        files = glob.glob(pattern)
+
+        # newest first
+        files.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+
+        # delete everything beyond the newest n
+        for p in files[n:]:
+            try:
+                os.remove(p)
+            except Exception:
+                pass
+
+
+
+    def _keep_last_n_asms(self, n: int = 100) -> None:
+        pattern = os.path.join(self.root_path, 'asm_debug' ,"*.asm*")
+        files = glob.glob(pattern)
+
+        files.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+
+        for p in files[n:]:
+            try:
+                os.remove(p)
+            except Exception:
+                pass
 
 
     def calculate_avg_fitness(self, individual):

@@ -204,7 +204,7 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
                     res = func(*args)
 
                 # Only emit full instructions / blocks
-                if isinstance(res, new_types.t_section):
+                if isinstance(res, (new_types.t_stmt)):
                     print(str(res), file=output)
 
                 return res
@@ -213,8 +213,11 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
             v = getattr(node, "value", None)
 
             # If terminal is a section terminal (like "nop"), wrap it
-            if v in tree.terminal_set and tree.terminal_set[v] is new_types.t_section:
-                return new_types.t_section(v)
+            if v in tree.terminal_set and tree.terminal_set[v] is (new_types.t_section or new_types.t_stmt) :
+                # return new_types.t_section(v)
+                return new_types.t_stmt(v)
+
+
 
             return kwargs.get(v, v)
 

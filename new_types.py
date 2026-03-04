@@ -25,13 +25,19 @@ class t_func_addres(str): pass
 class t_random_generator_lcg(str): pass
 class t_random_generator_xor_shift(str): pass
 
-# class t_stmt(t_section): pass
-# class t_program(t_section): pass
+class t_stmt(t_section): pass
+#class t_program(t_section): pass
 
+class t_reg(str): pass          # ax, bx, si...
+class t_mem(str): pass          # [bx], [si]...
+class t_imm(str): pass          # 0x10, 5, 65535...
 
 
 type_tokens  = {
     "section": t_section,
+    "reg": t_reg,
+    "mem":t_mem,
+    "imm":t_imm,
     "func_opcode_two_operands": t_func_opcode_two_operands,
     "func_opcode_two_operands_WORD": t_func_opcode_two_operands_WORD,
     "func_opcode_two_operands_BYTE": t_func_opcode_two_operands_BYTE,
@@ -50,4 +56,5 @@ type_tokens  = {
     "func_opcode_operand_1": t_func_opcode_operand_1,
     "random_generator_lcg": t_random_generator_lcg,
     "random_generator_xor_shift": t_random_generator_xor_shift,
+
 }

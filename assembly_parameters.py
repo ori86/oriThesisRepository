@@ -26,7 +26,7 @@ addressing_registers = ["[bx]", "[si]", "[di]", "[bp]"]
 pop_registers = general_registers + ["WORD " + add_reg for add_reg in addressing_registers] + ["ds", "es"]  #+, "ss"]
 push_registers = pop_registers + ["cs", "ss"]
 labels = []
-consts = [str(2*i) for i in range(-10, 133)] + ["65535", "0xCCCC"]
+consts = [str(2*i) for i in range(0, 133)] + ["65535", "0xCCCC"]
 
 def func_opcode(f, opcode, *args):
     print("{}".format(opcode), file=f)
@@ -135,74 +135,25 @@ def section(*args):
 from new_types import *
 
 TAG_TO_TYPE = {
-    "reg": t_func_opcode_operand_WORD,
-    "half_reg": t_func_opcode_operand_BYTE,
-    "address": t_func_opcode_operand_WORD,
-    "const": t_func_opcode_operand_WORD,   # adjust if you sometimes need BYTE
 
-    # upwards good
-    # downwards bad
-
-    "op": t_func_opcode,
-    "op_double": t_func_opcode,
-    "op_single": t_func_opcode,
-    "op_jmp": t_func_opcode,
-    "op_rep": t_func_opcode,
-    "op_special": t_func_opcode,
-    "op_function": t_func_opcode,
-    "op_pointer": t_func_opcode,
-    "op_ret": t_func_opcode,
-    "op_push": t_func_opcode,
-    "op_pop": t_func_opcode,
-    "op_double_no_const": t_func_opcode,
-    "op_shift": t_func_opcode,
-    "section": t_section,
-    # "label", "call_func", "return" are not used as raw terminals in the code below;
-    # you can map them later if you explicitly need them.
+    "reg": t_reg,
+    "mem": t_mem,
+    "imm": t_imm,
+    "statement": t_stmt,
 }
 
+
 def create_terminals(terminal_tuples):
-    return {value : TAG_TO_TYPE[tag] for value, tag in terminal_tuples if tag in TAG_TO_TYPE}
+    ret = {value : TAG_TO_TYPE[tag] for value, tag in terminal_tuples if tag in TAG_TO_TYPE}
+    return ret
 
 
 terminal_set = create_terminals(
     [(reg, "reg") for reg in general_registers] +
-    [("nop", "section")]
+    [(addr, "mem") for addr in addressing_registers] +
+    [(c, "imm") for c in consts] +
+    [("nop", "statement")]
 )
 
 
-# terminal_set = create_terminals(
-#     [(reg, "reg") for reg in general_registers] +
-#     # Remove BYTE terminals for now so terminal types do not include t_func_opcode_operand_BYTE
-#     # [(reg, "half_reg") for reg in general_half_registers] +
-#     [(reg, "address") for reg in addressing_registers] +
-#     [(const, "const") for const in consts] +
-#     # Add a t_section terminal so seq(a: t_section, b: t_section) is legal
-#     [("nop", "section")]
-# )
 
-
-# terminal_set = create_terminals([(reg, "reg") for reg in general_registers] + \
-#             [(reg, "half_reg") for reg in general_half_registers] + \
-#             [(reg, "address") for reg in addressing_registers] + \
-#             [(const, "const") for const in consts])
-
-
-
-#+ \
-            # [(reg, "push_reg") for reg in push_registers] + \
-            # [(reg, "pop_reg") for reg in pop_registers] + \
-            # [(opcode, "op_double") for opcode in opcodes_double] + \
-            # [(opcode, "op_single") for opcode in opcodes_single] + \
-            # [(opcode, "op_jmp") for opcode in opcodes_jump] + \
-            # [(opcode, "op") for opcode in opcodes_no_operands] + \
-            # [(opcode, "op_rep") for opcode in opcodes_repeats] + \
-            # [(opcode, "op_special") for opcode in opcodes_special] + \
-            # [(opcode, "op_function") for opcode in opcodes_function] + \
-            # [(opcode, "op_pointer") for opcode in opcodes_pointers] + \
-            # [(opcode, "op_ret") for opcode in opcode_ret] + \
-            # [(opcode, "op_push") for opcode in opcode_push] + \
-            # [(opcode, "op_pop") for opcode in opcode_pop] + \
-            # [(opcode, "op_double_no_const") for opcode in opcodes_double_no_cost] + \
-            # [(opcode, "op_shift") for opcode in opcodes_shift] + \
-            # [("", "section")])

@@ -59,11 +59,14 @@ def setup(competition_size=3):
 
 def create_algo():
 
+    # print(f"terminal set:\n{terminal_set}\n")
+    # print(f"function set:\n{FUNCTION_SET2}\n")
+
     algo = SimpleEvolution(
-            Subpopulation(creators=GrowCreator(init_depth=(2,20),
+            Subpopulation(creators=GrowCreator(init_depth=(3,20),
                                            terminal_set=terminal_set,
                                            function_set=FUNCTION_SET2,
-                                           root_type = new_types.t_section,
+                                           root_type = new_types.t_stmt,
                                            bloat_weight=0.00001),
                           population_size=100,
                           evaluator=AssemblyEvaluator(root_path=root_path, nasm_path=nasm_path),
@@ -154,7 +157,8 @@ def main():
 
 
 
+
+
 if __name__ == '__main__':
     main()
-
 

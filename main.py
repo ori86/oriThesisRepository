@@ -22,7 +22,7 @@ from eckity.creators.gp_creators.grow import GrowCreator
 from eckity.genetic_encodings.gp.tree.utils import get_func_types
 
 # imports from my files
-from new_primitives2 import FUNCTION_SET2
+from evo_funcs import FUNCTION_SET2
 from irena_evaluator import AssemblyEvaluator
 from assembly_parameters import terminal_set as terminal_set
 

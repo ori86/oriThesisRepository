@@ -24,7 +24,7 @@ RATE = 3
 # casting_utils.py
 from typing import Literal, Optional
 from eckity.genetic_encodings.gp.tree.tree_individual import Tree
-import new_types
+import evo_types
 
 
 
@@ -126,15 +126,15 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
     #             else:
     #                 res = func(*args)
 
-    #             if isinstance(res, (new_types.t_stmt)):
+    #             if isinstance(res, (evo_types.t_stmt)):
     #                 print(str(res), file=output)
 
     #             return res
 
     #         v = getattr(node, "value", None)
 
-    #         if v in tree.terminal_set and tree.terminal_set[v] is (new_types.t_section or new_types.t_stmt) :
-    #             return new_types.t_stmt(v)
+    #         if v in tree.terminal_set and tree.terminal_set[v] is (evo_types.t_section or evo_types.t_stmt) :
+    #             return evo_types.t_stmt(v)
 
 
 
@@ -200,8 +200,8 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
             except Exception:
                 term_type = None
 
-            if term_type in (new_types.t_section, new_types.t_stmt):
-                return new_types.t_stmt(v)
+            if term_type in (evo_types.t_section, evo_types.t_stmt):
+                return evo_types.t_stmt(v)
 
             return kwargs.get(v, v)
 
@@ -218,7 +218,7 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
             # If your program returns a statement-like object, print it ONCE here.
             # This is what prevents duplication.
-            if isinstance(res, new_types.t_stmt):
+            if isinstance(res, evo_types.t_stmt):
                 print(str(res), file=file)
 
             after = file.tell()

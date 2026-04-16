@@ -1,4 +1,4 @@
-from new_types import *
+from evo_types import *
 
 
 # --- helper decorator: attaches typed-GP metadata for Eckity ---

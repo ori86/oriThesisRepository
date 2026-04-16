@@ -132,7 +132,7 @@ def section(*args):
 
 
 
-from new_types import *
+from evo_types import *
 
 TAG_TO_TYPE = {
 

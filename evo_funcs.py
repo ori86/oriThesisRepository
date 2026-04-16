@@ -1,4 +1,4 @@
-from new_types import *
+from evo_types import *
 
 
 # -------- Program composition --------
@@ -20,7 +20,6 @@ def nop() -> t_section:
     return t_section("nop")
 
 
-from new_types import *
 
 
 

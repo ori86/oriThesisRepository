@@ -1,7 +1,7 @@
 # imports
 import random
 import os
-import new_types
+import evo_types
 import copy
 from time import time
 
@@ -66,7 +66,7 @@ def create_algo():
             Subpopulation(creators=GrowCreator(init_depth=(3,20),
                                            terminal_set=terminal_set,
                                            function_set=FUNCTION_SET2,
-                                           root_type = new_types.t_stmt,
+                                           root_type = evo_types.t_stmt,
                                            bloat_weight=0.00001),
                           population_size=100,
                           evaluator=AssemblyEvaluator(root_path=root_path, nasm_path=nasm_path),
@@ -163,7 +163,7 @@ def check_functions():
             Subpopulation(creators=GrowCreator(init_depth=(1,20),
                                            terminal_set=terminal_set,
                                            function_set=FUNCTION_SET2,
-                                           root_type = new_types.t_stmt,
+                                           root_type = evo_types.t_stmt,
                                            bloat_weight=0.001),
                           population_size=4,
                           evaluator=AssemblyEvaluator(root_path=root_path, nasm_path=nasm_path),

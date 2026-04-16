@@ -151,11 +151,26 @@ def prog5(a: t_stmt, b: t_stmt, c: t_stmt, d: t_stmt , e:t_stmt) -> t_stmt:
 
 
 
+
+def push_r(dst: t_reg) -> t_stmt:
+    return t_stmt(f"push {dst}")
+
+
+def pop_r(dst: t_reg) -> t_stmt:
+    return t_stmt(f"pop {dst}")
+
+
+
+
+
+
+
 FUNCTION_SET2 = [
 
 
     stosb, stosw, 
 
+    push_r, pop_r, 
     
     prog2, prog3, prog4, prog5,
 

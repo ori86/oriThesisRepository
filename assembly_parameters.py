@@ -140,8 +140,8 @@ TAG_TO_TYPE = {
     "mem": t_mem,
     "imm": t_imm,
     "statement": t_stmt,
-    "push_op": t_push,
-    "pop_op": t_pop
+    #"push_op": t_push,
+    #"pop_op": t_pop
 }
 
 

@@ -188,5 +188,5 @@ def check_functions():
     test_algo.evolve()
 
 if __name__ == '__main__':
-    #main()
-    check_functions()
+    main()
+    #check_functions()

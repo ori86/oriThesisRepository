@@ -6,3 +6,4 @@ zombies/
 *.csv
 !bundle/**
 !bundle/*.csv
+asm_debug/*.asm

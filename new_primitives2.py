@@ -126,9 +126,9 @@ def idm(x: t_mem) -> t_mem:
     return x
 def idi(x: t_imm) -> t_imm:
     return x
-
 def ids(x:t_stmt) -> t_stmt:
     return x
+
 
 
 def seq_stmt(a: t_stmt, b: t_stmt) -> t_stmt:
@@ -157,7 +157,7 @@ FUNCTION_SET2 = [
 
     stosb, stosw, 
 
-    seq_stmt,
+    
     prog2, prog3, prog4, prog5,
 
     mov_rr,mov_ri,mov_rm,mov_mr,
@@ -174,22 +174,4 @@ FUNCTION_SET2 = [
 
 
 ]
-
-
-# # Export to Eckity
-# FUNCTION_SET2 = [
-#     seq,
-#     #nop,
-#     stosb,
-#     stosw,
-#     mov,
-#     add,
-#     sub,
-#     xor,
-#     cmp,
-#     inc,
-#     dec,
-#     idw,
-#     #movb,
-# ]
 

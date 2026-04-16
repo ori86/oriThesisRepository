@@ -140,6 +140,8 @@ TAG_TO_TYPE = {
     "mem": t_mem,
     "imm": t_imm,
     "statement": t_stmt,
+    "push_op": t_push,
+    "pop_op": t_pop
 }
 
 
@@ -152,7 +154,9 @@ terminal_set = create_terminals(
     [(reg, "reg") for reg in general_registers] +
     [(addr, "mem") for addr in addressing_registers] +
     [(c, "imm") for c in consts] +
-    [("nop", "statement")]
+    [(s, "statement") for s in opcodes_no_operands] +
+    [("push","push_op")] +
+    [("pop","pop_op")]
 )
 
 

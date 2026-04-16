@@ -158,7 +158,35 @@ def main():
 
 
 
+def check_functions(): 
+    test_algo = SimpleEvolution(
+            Subpopulation(creators=GrowCreator(init_depth=(1,20),
+                                           terminal_set=terminal_set,
+                                           function_set=FUNCTION_SET2,
+                                           root_type = new_types.t_stmt,
+                                           bloat_weight=0.001),
+                          population_size=4,
+                          evaluator=AssemblyEvaluator(root_path=root_path, nasm_path=nasm_path),
+                          # minimization problem (fitness is sum of values), so lower fitness is better
+                          higher_is_better=True,
+                          elitism_rate=0.00,
+                          operators_sequence=[
+                            SubtreeCrossover(probability=1, arity=2), # crossover inner trees of 2 individuals, can be more
+                            #SubtreeMutation(probability=1, arity=1), # mutate a subtree of one inner tree of 1 individual
+                          ],
+                          selection_methods=[
+                              # (selection method, selection probability) tuple
+                              (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
+                          ]),
+            breeder=SimpleBreeder(),
+            max_workers=1,
+            max_generation=2,
+            statistics=BestAverageWorstStatistics()
+        )
+    
+
+    test_algo.evolve()
 
 if __name__ == '__main__':
-    main()
-
+    #main()
+    check_functions()

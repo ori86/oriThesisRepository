@@ -31,7 +31,9 @@ class t_stmt(t_section): pass
 class t_reg(str): pass          # ax, bx, si...
 class t_mem(str): pass          # [bx], [si]...
 class t_imm(str): pass          # 0x10, 5, 65535...
-
+class t_push(str) : pass
+class t_pop(str): pass
+class t_ret(str): pass
 
 type_tokens  = {
     "section": t_section,

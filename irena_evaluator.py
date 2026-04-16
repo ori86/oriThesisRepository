@@ -99,12 +99,12 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
 
 
+
     # def _write_survivor_to_file(self, tree, file_path):
     #     def execute_with_file(pos, output, **kwargs):
     #         node = tree.tree[pos[0]]
 
     #         if isinstance(node, FunctionNode):
-    #             # evaluate children first
     #             args = []
     #             for _ in range(node.n_args):
     #                 pos[0] += 1
@@ -113,14 +113,12 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
     #             func = node.function
     #             sig = inspect.signature(func)
 
-    #             # count regular positional params (no *args, **kwargs)
     #             params = [
     #                 p for p in sig.parameters.values()
     #                 if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
     #             ]
     #             n_params = len(params)
 
-    #             # Call the primitive in the right style
     #             if n_params == len(args):
     #                 res = func(*args)
     #             elif n_params == len(args) + 1:
@@ -128,127 +126,106 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
     #             else:
     #                 res = func(*args)
 
-    #             # If a primitive returns assembly text, emit it
-
-    #             # Only emit full instruction lines (t_section), never operands
-    #             if isinstance(res, new_types.t_section):
+    #             if isinstance(res, (new_types.t_stmt)):
     #                 print(str(res), file=output)
 
     #             return res
 
-    #         else:  # TerminalNode
-    #             # return kwargs.get(getattr(node, "value", None), getattr(node, "value", None))
-    #             v = getattr(node, "value", None)
+    #         v = getattr(node, "value", None)
 
-    #             # if this terminal is a section terminal (like "nop"), wrap it as t_section
-    #             if v in tree.terminal_set and tree.terminal_set[v] is new_types.t_section:
-    #                 return new_types.t_section(v)
+    #         if v in tree.terminal_set and tree.terminal_set[v] is (new_types.t_section or new_types.t_stmt) :
+    #             return new_types.t_stmt(v)
 
-    #             return kwargs.get(v, v)
+
+
+    #         return kwargs.get(v, v)
+
 
     #     with open(file_path, "w+", encoding="utf-8") as file:
-    #         # Safer, predictable skeleton
     #         print("bits 16", file=file)
     #         print("org 0", file=file)
     #         print("start:", file=file)
-    #         print("push cs", file=file)
-    #         print("pop ds", file=file)
-    #         print("push cs", file=file)
-    #         print("pop es", file=file)
-    #         print("cld", file=file)
-    #         print("xor di, di", file=file)
 
     #         before = file.tell()
-    #         execute_with_file([0], file)
+    #         pos = [0]
+    #         execute_with_file(pos, file)
+    #         used = pos[0] + 1
     #         after = file.tell()
 
-    #         # If the GP produced nothing, at least do something valid
     #         if after == before:
     #             print("nop", file=file)
 
-    #         # Prevent falling into padding bytes
-    #         print("jmp start", file=file)
-
-    #         # Pad in BYTES (NASM), not text length
-    #         # Keep 510 to match your original intention
     #         print("times 510-($-$$) db 0x90", file=file)
 
-                
-
     def _write_survivor_to_file(self, tree, file_path):
-        def execute_with_file(pos, output, **kwargs):
+        def execute(pos, **kwargs):
             node = tree.tree[pos[0]]
 
+            # Function node: evaluate children first, then call the function
             if isinstance(node, FunctionNode):
-                # evaluate children first
                 args = []
                 for _ in range(node.n_args):
                     pos[0] += 1
-                    args.append(execute_with_file(pos, output, **kwargs))
+                    args.append(execute(pos, **kwargs))
 
                 func = node.function
-                sig = inspect.signature(func)
 
+                # Keep your "maybe takes output" behavior, but don't pass output by default.
+                # We only pass it if the function *requires* it.
+                sig = inspect.signature(func)
                 params = [
                     p for p in sig.parameters.values()
                     if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
                 ]
                 n_params = len(params)
 
-                # Call primitive
                 if n_params == len(args):
-                    res = func(*args)
+                    return func(*args)
                 elif n_params == len(args) + 1:
-                    res = func(output, *args)
+                    # Historically you used (output, *args). We'll still support
+                    # "extra leading parameter" functions, but we will pass a writer
+                    # object (see below) at the top-level only. Here we pass a placeholder.
+                    # This preserves call compatibility without printing during recursion.
+                    return func(kwargs.get("_writer"), *args)
                 else:
-                    res = func(*args)
+                    return func(*args)
 
-                # Only emit full instructions / blocks
-                if isinstance(res, (new_types.t_stmt)):
-                    print(str(res), file=output)
-
-                return res
-
-            # TerminalNode
+            # Terminal node: map value through kwargs or special casting
             v = getattr(node, "value", None)
 
-            # If terminal is a section terminal (like "nop"), wrap it
-            if v in tree.terminal_set and tree.terminal_set[v] is (new_types.t_section or new_types.t_stmt) :
-                # return new_types.t_section(v)
+            # Fix: (A or B) is just A if A is truthy, and 'is' is identity.
+            # Use membership check instead.
+            try:
+                term_type = tree.terminal_set.get(v, None)
+            except Exception:
+                term_type = None
+
+            if term_type in (new_types.t_section, new_types.t_stmt):
                 return new_types.t_stmt(v)
-
-
 
             return kwargs.get(v, v)
 
-
-        # print("tree\n")
-        # print(tree)
-        # print("tree.tree\n")
-        # print(tree.tree)
-        # print("tree.tree[pos[0]]\n")
-        # print(tree.tree[[0][0]])
         with open(file_path, "w+", encoding="utf-8") as file:
-            # Minimal required header for NASM/corewars
             print("bits 16", file=file)
             print("org 0", file=file)
             print("start:", file=file)
 
             before = file.tell()
             pos = [0]
-            execute_with_file(pos, file)
-            used = pos[0] + 1
-            #print(f"DEBUG used_nodes={used} / total_nodes={len(tree.tree)}", flush=True)
-            after = file.tell()
 
-            # If GP produced nothing, keep it valid
+            # Evaluate once, then emit once
+            res = execute(pos, _writer=file)
+
+            # If your program returns a statement-like object, print it ONCE here.
+            # This is what prevents duplication.
+            if isinstance(res, new_types.t_stmt):
+                print(str(res), file=file)
+
+            after = file.tell()
             if after == before:
                 print("nop", file=file)
 
-            # No forced loop. Execution will fall into padding (NOPs).
             print("times 510-($-$$) db 0x90", file=file)
-
-
 
 
 
@@ -313,7 +290,6 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
                 "indiv2_index": 0,
             }
 
-        # Determine indices safely based on actual length
         n = len(indiv_data)
         if n == 1:
             indiv1_index = 0
@@ -347,7 +323,6 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
         train_survivors = os.path.join(self.root_path, "survivors")
 
 
-        # Clean only old GA warriors, keep the training ones
         for f in os.listdir(survivors_path):
             if "try" in f:
                 try:
@@ -356,7 +331,6 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
                     pass
 
                 
-        # Clean previous survivors
         for f in os.listdir(survivors_path):
             if "try" in f:
                 try:
@@ -364,11 +338,10 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
                 except Exception:
                     continue
 
-        # Copy training warriors from the bundle
 
 
 
-        train_survivors = os.path.join(self.root_path, "survivors")  # C:\Users\oriei\Thesis\oriWorkNewVenv\survivors
+        train_survivors = os.path.join(self.root_path, "survivors") 
 
         if not os.path.isdir(train_survivors):
             raise FileNotFoundError(f"Training survivors folder not found: {train_survivors}")
@@ -404,9 +377,6 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
         score1 = self._compile_survivor(asm_path1, individual_name1, survivors_path, nasm_path)
         score2 = self._compile_survivor(asm_path2, individual_name2, survivors_path, nasm_path)
 
-        # print("compiled check:",
-        #     individual_name1, os.path.exists(os.path.join(survivors_path, individual_name1)),
-        #     individual_name2, os.path.exists(os.path.join(survivors_path, individual_name2)))
 
         if score1 == -1 or score2 == -1:
             return 0.0
@@ -415,13 +385,11 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
         requested_scores = os.path.join(worker_root, f"scores_{individual.id}.csv")
         default_scores = os.path.join(self.bundle_dir, "scores.csv")
 
-        # delete stale files
         if os.path.exists(requested_scores):
             os.remove(requested_scores)
         if os.path.exists(default_scores):
             os.remove(default_scores)
 
-        # Make sure bundle/bin/corewars8086-5.0.1.jar exists for cgx.bat
         bin_dir = os.path.join(self.bundle_dir, "bin")
         os.makedirs(bin_dir, exist_ok=True)
 
@@ -431,32 +399,26 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
 
         t0 = time.time()
-        #print(f"EVAL {individual.id}: starting cgx at {t0:.1f}")
-        #print("EVAL survivors count:", len(os.listdir(survivors_path)))
 
-        # scores files: cgx might ignore the requested path, but we must define one
         requested_scores = os.path.join(worker_root, f"scores_{individual.id}.csv")
         default_scores = os.path.join(self.bundle_dir, "scores.csv")
 
-        # clean stale files
         if os.path.exists(requested_scores):
             os.remove(requested_scores)
         if os.path.exists(default_scores):
             os.remove(default_scores)
 
-        # pass requested path to cgx (even if it ignores it)
         scores_path = requested_scores
 
-        # Run the engine via cgx.bat, from inside the bundle directory
         proc = subprocess.Popen(
             ["cmd.exe", "/c", self.cgx_path, survivors_path, scores_path],
-            cwd=self.bundle_dir,              # IMPORTANT: run from bundle dir
+            cwd=self.bundle_dir,           
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
 
         try:
-            stdout, stderr = proc.communicate(timeout=180)  # 3 minutes for debugging
+            stdout, stderr = proc.communicate(timeout=180)  
         except subprocess.TimeoutExpired:
             print(f"EVAL {individual.id}: cgx TIMEOUT, killing process")
             proc.kill()
@@ -467,13 +429,11 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
             print(stderr.decode(errors="ignore"))
 
         t1 = time.time()
-        # print(f"EVAL {individual.id}: cgx finished in {t1 - t0:.1f}s, rc={proc.returncode}")
         if stdout:
             print("cgx stdout:", stdout.decode(errors="ignore")[:500])
         if stderr:
             print("cgx stderr:", stderr.decode(errors="ignore")[:500])
 
-        # cgx sometimes ignores requested path and writes bundle/scores.csv
         actual_scores = None
         if os.path.exists(requested_scores):
             actual_scores = requested_scores
@@ -486,7 +446,6 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
             print("Default:", default_scores)
             return 0.0
 
-        # Copy to per-individual file so it will not be overwritten by the next eval
         if actual_scores != requested_scores:
             shutil.copy2(actual_scores, requested_scores)
 
@@ -549,7 +508,6 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
         # }
 
 
-        # Remove the compiled individual warriors from survivors
         for name in (individual_name1, individual_name2):
             compiled_path = os.path.join(survivors_path, name)
             if os.path.exists(compiled_path):
@@ -565,7 +523,6 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
         print(f'NOW {individual_name1} and {individual_name2}, got fitness: {return_fitness_value}, len: {len(individual.tree)}')
         return return_fitness_value
 
-        #return [fitness1, fitness2, fitness_group, norm_group]
 
 
 
@@ -573,10 +530,8 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
         pattern = os.path.join(self.root_path, "scores_*.csv")
         files = glob.glob(pattern)
 
-        # newest first
         files.sort(key=lambda p: os.path.getmtime(p), reverse=True)
 
-        # delete everything beyond the newest n
         for p in files[n:]:
             try:
                 os.remove(p)

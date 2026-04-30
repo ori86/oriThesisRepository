@@ -2,7 +2,7 @@ import datetime
 import random
 
 
-opcodes_no_operands = ["nop", "stosw", "lodsw", "movsw", "cmpsw", "scasw", "pushf", "popf",
+statement_terminals  = ["nop", "stosw", "lodsw", "movsw", "cmpsw", "scasw", "pushf", "popf",
                        "lahf", "stosb", "lodsb", "movsb", "cmpsb", "scasb", "xlat", "xlatb",
                        "cwd", "cbw", "cmc", "clc", "stc", "cli", "sti", "cld", "std"]
 opcodes_special = ["wait\nwait\nwait\nwait", "wait\nwait", "int 0x86", "int 0x87"]  # "nrg"=wait wait
@@ -28,107 +28,6 @@ push_registers = pop_registers + ["cs", "ss"]
 labels = []
 consts = [str(2*i) for i in range(0, 133)] + ["65535", "0xCCCC"]
 
-def func_opcode(f, opcode, *args):
-    print("{}".format(opcode), file=f)
-
-
-def func_opcode_openrand(f, opcode, op, *args):
-    print("{} {}".format(opcode, op), file=f)
-
-
-def func_opcode_two_operands(f, opcode, dst, src, *args):
-    print("{} {}, {}".format(opcode, dst, src), file=f)
-
-
-def func_opcode_operand_WORD(f, opcode, op, *args):
-    print("{} {} {}".format(opcode, "WORD", op), file=f)
-
-
-def func_opcode_two_operands_WORD(f, opcode, dst, src, *args):
-    print("{} {} {}, {}".format(opcode, "WORD", dst, src), file=f)
-
-
-def func_opcode_operand_BYTE(f, opcode, op, *args):
-    print("{} {} {}".format(opcode, "BYTE", op), file=f)
-
-
-def func_opcode_two_operands_BYTE(f, opcode, dst, src, *args):
-    print("{} {} {}, {}".format(opcode, "BYTE", dst, src), file=f)
-
-
-def func_opcode_operand_cl(f, opcode, dst, *args):
-    func_opcode_two_operands(f, opcode, dst, "cl")
-
-
-def func_opcode_operand_cl_WORD(f, opcode, dst, *args):
-    func_opcode_two_operands_WORD(f, opcode, dst, "cl")
-
-
-def func_opcode_operand_cl_BYTE(f, opcode, dst, *args):
-    func_opcode_two_operands_BYTE(f, opcode, dst, "cl")
-
-
-def func_opcode_operand_1(f, opcode, dst, *args):
-    func_opcode_two_operands(f, opcode, dst, "1")
-
-
-def func_opcode_operand_1_WORD(f, opcode, dst, *args):
-    func_opcode_two_operands_WORD(f, opcode, dst, "1")
-
-
-def func_opcode_operand_1_BYTE(f, opcode, dst, *args):
-    func_opcode_two_operands_BYTE(f, opcode, dst, "1")
-
-
-def func_call(f, *args):
-    func_opcode_openrand(f, "call", "l"+str(len(labels)))
-
-
-def func_addres(f, op, const, *args):
-    return "{} + {}]".format(str(op)[:-1], const)
-
-
-def func_dw(f, const, *args):
-    func_opcode_openrand(f, "dw", const)
-
-
-def func_jmp(f, op, *args):
-    func_opcode_openrand(f, "jmp", op)
-
-
-def func_backwords_jmp(f, opcode, *args):
-    func_opcode_openrand(f, opcode, "l" + str(len(labels) - 1))
-
-
-def func_forward_jmp(f, opcode, *args):
-    func_opcode_openrand(f, opcode, "l" + str(len(labels)))
-
-
-def random_generator_lcg(f, op, *args):
-    func_opcode_two_operands(f, "mov", "ax", hex(int(datetime.datetime.now().timestamp())))
-    func_opcode_two_operands(f, "mov", op, 1664525)
-    func_opcode_openrand(f, "mul", op)
-    func_opcode_two_operands(f, "add", "ax", 1013904223)
-
-
-def random_generator_xor_shift(f, op1, op2, *args):
-    func_opcode_two_operands(f, "mov", op1, random.randint(0, 65535))
-    func_opcode_two_operands(f, "mov", op2, random.randint(0, 65535))
-    func_opcode_two_operands(f, "xor", op1, op2)
-    func_opcode_two_operands(f, "shl", op1, 7)
-    func_opcode_two_operands(f, "shr", op2, 5)
-    func_opcode_two_operands(f, "xor", op1, op2)
-
-
-def put_label(f, *args):
-    lb = len(labels)
-    labels.append(lb)
-    print("l{}:".format(lb), file=f)
-
-
-def section(*args):
-    return
-
 
 
 
@@ -137,11 +36,13 @@ from evo_types import *
 TAG_TO_TYPE = {
 
     "reg": t_reg,
+    "half_reg": t_half_reg,
     "mem": t_mem,
     "imm": t_imm,
     "statement": t_stmt,
-    #"push_op": t_push,
-    #"pop_op": t_pop
+    "section": t_section,
+
+ 
 }
 
 
@@ -152,11 +53,12 @@ def create_terminals(terminal_tuples):
 
 terminal_set = create_terminals(
     [(reg, "reg") for reg in general_registers] +
+    [(h_reg,"half_reg") for h_reg in general_half_registers]+
     [(addr, "mem") for addr in addressing_registers] +
     [(c, "imm") for c in consts] +
-    [(s, "statement") for s in opcodes_no_operands] +
-    [("push","push_op")] +
-    [("pop","pop_op")]
+    [(s, "statement") for s in statement_terminals ] +
+    [("", "section")]
+
 )
 
 

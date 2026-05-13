@@ -14,6 +14,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from assembly_individual import AssemblyIndividual
 from eckity.evaluators.simple_individual_evaluator import SimpleIndividualEvaluator
 from eckity.genetic_encodings.gp.tree.tree_node import FunctionNode, TerminalNode
+from evo_funcs import reset_labels
 
 # 0 - score, 1 - lifetime, 2 - written bytes
 SCORE = 0
@@ -158,6 +159,7 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
     #         print("times 510-($-$$) db 0x90", file=file)
 
     def _write_survivor_to_file(self, tree, file_path):
+        reset_labels()  # Fresh label counter for each assembled file
         def execute(pos, **kwargs):
             node = tree.tree[pos[0]]
 

@@ -18,7 +18,6 @@ from eckity.genetic_operators.crossovers.subtree_crossover import SubtreeCrossov
 from eckity.genetic_operators.mutations.subtree_mutation import SubtreeMutation
 from eckity.genetic_operators.selections.tournament_selection import TournamentSelection
 from eckity.subpopulation import Subpopulation
-from eckity.creators.gp_creators.grow import GrowCreator
 from eckity.genetic_encodings.gp.tree.utils import get_func_types
 
 # imports from my files
@@ -58,27 +57,26 @@ def setup(competition_size=3):
 
 
 def create_algo():
-
-    # print(f"terminal set:\n{terminal_set}\n")
-    # print(f"function set:\n{FUNCTION_SET2}\n")
+    creator = GrowCreator(
+        init_depth=(5, 20),
+        terminal_set=terminal_set,
+        function_set=FUNCTION_SET2,
+        root_type=evo_types.t_stmt,
+        bloat_weight=0,
+        p_prune=0.1,
+    )
 
     algo = SimpleEvolution(
-            Subpopulation(creators=GrowCreator(init_depth=(3,20),
-                                           terminal_set=terminal_set,
-                                           function_set=FUNCTION_SET2,
-                                           root_type = evo_types.t_stmt,
-                                           bloat_weight=0.00001),
+            Subpopulation(creators=creator,
                           population_size=100,
                           evaluator=AssemblyEvaluator(root_path=root_path, nasm_path=nasm_path),
-                          # minimization problem (fitness is sum of values), so lower fitness is better
                           higher_is_better=True,
                           elitism_rate=0.00,
                           operators_sequence=[
-                            SubtreeCrossover(probability=0.5, arity=2), # crossover inner trees of 2 individuals, can be more
-                            SubtreeMutation(probability=0.5, arity=1), # mutate a subtree of one inner tree of 1 individual
+                            SubtreeCrossover(probability=0.5, arity=2),
+                            SubtreeMutation(probability=0.5, arity=1),
                           ],
                           selection_methods=[
-                              # (selection method, selection probability) tuple
                               (TournamentSelection(tournament_size=4, higher_is_better=True), 1)
                           ]),
             breeder=SimpleBreeder(),

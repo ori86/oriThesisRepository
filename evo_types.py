@@ -8,7 +8,8 @@ class t_imm(str): pass          # 0x10, 5, 65535...
 class t_push(str) : pass
 class t_pop(str): pass
 class t_ret(str): pass
-class t_half_reg(str):pass          # ah, al, bh, bl, ch, cl, dh, dl
+class t_half_reg(str):pass      # ah, al, bh, bl, ch, cl, dh, dl
+class t_jmp(str): pass          # je, jne, ja, jmp, loop, jcxz...
 
 
 

@@ -254,58 +254,75 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
 
 
-    def _read_scores(self, scores_path, individual_name1):
-        group_data = []
-        indiv_data = []
+    def _count_asm_lines(self, asm_path: str) -> int:
+        """Count actual instruction lines in an ASM file (excludes headers/directives)."""
+        skip = {'bits 16', 'org 0', 'start:'}
+        count = 0
+        try:
+            with open(asm_path, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    s = line.strip()
+                    if s and s not in skip and not s.startswith('times ') and not s.startswith(';'):
+                        count += 1
+        except OSError:
+            pass
+        return count
 
-        with open(scores_path, 'r') as scores:
-            info = csv.reader(scores)
-            flag_ind = False
-            for line in info:
+    def _read_scores(self, scores_path, individual_name1):
+        all_groups = []      # all [score, alive, bytes, rate] rows from Groups section
+        all_warriors = []    # all [score, alive, bytes, rate] rows from Warriors section
+
+        our_name = individual_name1[:-1]  # e.g. "10try1" → "10try"
+        group_idx = None
+        indiv1_idx = None
+        indiv2_idx = None
+
+        with open(scores_path, 'r') as f:
+            reader = csv.reader(f)
+            mode = "groups"
+            for line in reader:
                 if not line:
                     continue
-
                 if "Groups:" in line:
+                    mode = "groups"
                     continue
-
-                if not flag_ind and "Warriors:" not in line:
-                    if line[0] == individual_name1[:-1]:
-                        group_data.append(line[1:])
-                    continue
-
                 if "Warriors:" in line:
-                    flag_ind = True
+                    mode = "warriors"
                     continue
 
-                if flag_ind:
-                    if line[0][:-1] == individual_name1[:-1]:
-                        indiv_data.append(line[1:])
+                name = line[0].strip()
+                try:
+                    values = [float(x) for x in line[1:5]]
+                except (ValueError, IndexError):
+                    continue
 
+                if mode == "groups":
+                    if name == our_name:
+                        group_idx = len(all_groups)
+                    all_groups.append(values)
+                elif mode == "warriors":
+                    if name[:-1] == our_name:
+                        if name[-1] == "1":
+                            indiv1_idx = len(all_warriors)
+                        elif name[-1] == "2":
+                            indiv2_idx = len(all_warriors)
+                    all_warriors.append(values)
 
-        # If nothing was found, return zeros
-        if not group_data or not indiv_data:
-            return {
-                "group_data": [[0, 0, 0, 0]],
-                "indiv_data": [[0, 0, 0, 0]],
-                "group_index": 0,
-                "indiv1_index": 0,
-                "indiv2_index": 0,
-            }
-
-        n = len(indiv_data)
-        if n == 1:
-            indiv1_index = 0
-            indiv2_index = 0
-        else:
-            indiv1_index = 0
-            indiv2_index = 1
+        if not all_groups or group_idx is None:
+            all_groups = [[0.0, 0.0, 0.0, 0.0]]
+            group_idx = 0
+        if not all_warriors or indiv1_idx is None:
+            all_warriors = [[0.0, 0.0, 0.0, 0.0]]
+            indiv1_idx = 0
+        if indiv2_idx is None:
+            indiv2_idx = indiv1_idx
 
         return {
-            "group_data": group_data,
-            "indiv_data": indiv_data,
-            "group_index": 0,
-            "indiv1_index": indiv1_index,
-            "indiv2_index": indiv2_index,
+            "group_data": all_groups,
+            "group_index": group_idx,
+            "all_warriors_data": all_warriors,
+            "indiv1_index": indiv1_idx,
+            "indiv2_index": indiv2_idx,
         }
 
 
@@ -472,57 +489,56 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
 
 
+        # Count actual assembly instruction lines (not GP tree nodes)
+        asm_lines = self._count_asm_lines(asm_path1)
+
         # Read and process scores
         results = self._read_scores(scores_path, individual_name1)
-        #print("EVAL parsed group rows:", results["group_data"][:2], "indiv rows:", results["indiv_data"][:2])
 
-        # norm_indiv1 = normalize_data(results["indiv_data"], results["indiv1_index"])
-        # fitness1 = fitness_calculation(
-        #     norm_indiv1[SCORE],
-        #     norm_indiv1[LIFETIME],
-        #     norm_indiv1[BYTES],
-        #     norm_indiv1[RATE],
-        # )
+        # Per-try fitnesses: normalize each try against all warriors in this run
+        norm_indiv1 = normalize_data(results["all_warriors_data"], results["indiv1_index"])
+        fitness1 = fitness_calculation(*norm_indiv1)
 
-        # norm_indiv2 = normalize_data(results["indiv_data"], results["indiv2_index"])
-        # fitness2 = fitness_calculation(
-        #     norm_indiv2[SCORE],
-        #     norm_indiv2[LIFETIME],
-        #     norm_indiv2[BYTES],
-        #     norm_indiv2[RATE],
-        # )
+        norm_indiv2 = normalize_data(results["all_warriors_data"], results["indiv2_index"])
+        fitness2 = fitness_calculation(*norm_indiv2)
 
+        # Group fitness: normalize our group against all groups in this run
         norm_group = normalize_data(results["group_data"], results["group_index"])
-        fitness_group = fitness_calculation(
-            norm_group[SCORE],
-            norm_group[LIFETIME],
-            norm_group[BYTES],
-            norm_group[RATE],
-        )
-        #print(f"EVAL id={individual.id} group_row={norm_group} fitness_group={fitness_group}")
+        fitness_group = fitness_calculation(*norm_group)
 
-        
-        # individual.extra_stats = {
-        #     "fitness1": float(fitness1),
-        #     "fitness2": float(fitness2),
-        #     "fitness_group": float(fitness_group),
-        #     "norm_group": [float(x) for x in norm_group],
-        # }
+        # ASM size bonus: 0–2 pts for generating 10–20+ real instruction lines
+        asm_bonus = min(2.0, asm_lines / 10.0)
 
+        # Combined fitness 0–10: avg combat (scaled to 0–8) + asm_bonus (0–2)
+        avg_combat = (fitness1 + fitness2 + fitness_group) / 3.0
+        return_fitness_value = round(avg_combat * 0.8 + asm_bonus, 5)
+
+        individual.extra_stats = {
+            "fitness1": float(fitness1),
+            "fitness2": float(fitness2),
+            "fitness_group": float(fitness_group),
+            "asm_lines": asm_lines,
+            "asm_bonus": float(asm_bonus),
+            "norm_group": [float(x) for x in norm_group],
+        }
 
         for name in (individual_name1, individual_name2):
             compiled_path = os.path.join(survivors_path, name)
             if os.path.exists(compiled_path):
                 os.remove(compiled_path)
 
-
         self._keep_last_n_scores(n=10)
-        self._keep_last_n_asms(n = 100)
+        self._keep_last_n_asms(n=100)
 
+        if(fitness1 == 0.0 or fitness2 == 0.0 or fitness_group == 0):
+            print(f'NOW {individual_name1} & {individual_name2}: '
+              f'fitness={0.0}, asm_lines={asm_lines} (tree_nodes={len(individual.tree)}), '
+              f'f1={fitness1}, f2={fitness2}, fg={fitness_group}, asm_bonus={asm_bonus:.2f}')
+            return 0.0
 
-
-        return_fitness_value = float(fitness_group)
-        print(f'NOW {individual_name1} and {individual_name2}, got fitness: {return_fitness_value}, len: {len(individual.tree)}')
+        print(f'NOW {individual_name1} & {individual_name2}: '
+              f'fitness={return_fitness_value}, asm_lines={asm_lines} (tree_nodes={len(individual.tree)}), '
+              f'f1={fitness1}, f2={fitness2}, fg={fitness_group}, asm_bonus={asm_bonus:.2f}')
         return return_fitness_value
 
 
@@ -590,27 +606,39 @@ class AssemblyEvaluator(SimpleIndividualEvaluator):
 
 
 def normalize_data(data, index):
-    data = np.array(data).astype(float)
-
+    """Column-wise min-max normalization; returns a [0,1] row for the given index."""
+    data = np.array(data, dtype=float)
     if len(data) == 0:
-        return [0, 0, 0, 0]
+        return [0.0, 0.0, 0.0, 0.0]
+    index = min(index, len(data) - 1)
 
-    if index >= len(data):
-        index = len(data) - 1
+    mins = data.min(axis=0)
+    maxs = data.max(axis=0)
+    row = data[index]
 
-    score = data[index][SCORE]
-    lifetime = data[index][LIFETIME]
-    bytes_written = data[index][BYTES]
-    rate = data[index][RATE]
-    return [score, lifetime, bytes_written, rate]
+    result = []
+    for i in range(min(4, data.shape[1])):
+        span = maxs[i] - mins[i]
+        if span == 0.0:
+            result.append(0.0 if maxs[i] == 0.0 else 1.0)
+        else:
+            result.append(float((row[i] - mins[i]) / span))
+    while len(result) < 4:
+        result.append(0.0)
+    return result
 
+
+# def fitness_calculation(score, alive_time, bytes_written, writing_rate):
+#     """All inputs are normalized to [0, 1]. Output is [0, 10].
+#     Keeps original relative weights (2 : 0.02 : 0.03 : 0.01); max raw = 2.06."""
+#     raw = 2 * score + 0.02 * alive_time + 0.03 * bytes_written + 0.01 * writing_rate
+#     return round(min(10.0, raw / 2.06 * 10), 5)
 
 def fitness_calculation(score, alive_time, bytes_written, writing_rate):
    # if bytes_written >= 5:
     #    bytes_written = 10 # 4 is the maximum in regular commands
     max_value = 10
     return round(2 * score + 0.02 * alive_time + 0.03 * min(max_value, bytes_written) + 0.01 * min(max_value, writing_rate), 5)
-
 
 def create_survivor_name(individual):
     """

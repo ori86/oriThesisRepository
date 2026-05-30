@@ -162,7 +162,7 @@ def check_functions():
                                            terminal_set=terminal_set,
                                            function_set=FUNCTION_SET2,
                                            root_type = evo_types.t_stmt,
-                                           bloat_weight=0.001),
+                                           bloat_weight=0.00001),
                           population_size=4,
                           evaluator=AssemblyEvaluator(root_path=root_path, nasm_path=nasm_path),
                           # minimization problem (fitness is sum of values), so lower fitness is better
